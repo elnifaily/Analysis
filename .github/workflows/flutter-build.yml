@@ -1,50 +1,57 @@
-name: Build Flutter Android APK
+name: Flutter Build Master
 
 on:
   push:
-    branches: [ main ] # Trigger on push to main branch
-  workflow_dispatch: # Allow manual trigger
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest # Use the latest Ubuntu runner
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      PATH: ${{ env.PATH }}:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
 
     steps:
+    # الخطوة 1: تنزيل الكود
     - name: Checkout code
-      uses: actions/checkout@v4 # Checkout the repository code
+      uses: actions/checkout@v4
 
-    # Note: Removed the potentially problematic 'android-actions/setup-android' step.
-    # The 'subosito/flutter-action' below should handle necessary Android SDK setup.
-
+    # الخطوة 2: تثبيت Java 17
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
-        distribution: 'temurin' # Use Temurin JDK distribution
-        java-version: '17' # Use Java 17, compatible with recent Android Gradle Plugin
+        distribution: 'temurin'
+        java-version: '17'
 
+    # الخطوة 3: تثبيت Android SDK يدويًا
+    - name: Install Android SDK
+      run: |
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip
+        unzip -q commandlinetools-linux-*.zip -d $ANDROID_HOME/cmdline-tools
+        rm commandlinetools-linux-*.zip
+        yes | $ANDROID_HOME/cmdline-tools/cmdline-tools/bin/sdkmanager --install "platforms;android-34" "build-tools;34.0.0" "ndk;25.1.8937393"
+
+    # الخطوة 4: تثبيت Flutter
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
-        channel: 'stable' # Use the stable Flutter channel
-        # Optional: specify Flutter version if needed
-        # flutter-version: '3.x.x'
+        channel: 'stable'
+        flutter-version: '3.13.0'  # 🔄 حدد إصدارك
 
-    - name: Install dependencies
-      run: flutter pub get
+    # الخطوة 5: الموافقة على التراخيص + dependencies
+    - name: Accept licenses and install packages
+      run: |
+        yes | $ANDROID_HOME/cmdline-tools/cmdline-tools/bin/sdkmanager --licenses
+        flutter pub get
 
-    # Accept Android SDK licenses automatically before build
-    - name: Accept Android licenses
-      run: yes | flutter doctor --android-licenses
-
+    # الخطوة 6: بناء الـ APK
     - name: Build APK
-      run: flutter build apk --release # Build a release APK
-      # Use --debug for a debug build:
-      # run: flutter build apk --debug
+      run: flutter build apk --release
 
-    - name: Upload APK artifact
+    # الخطوة 7: رفع الملف الناتج
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: release-apk # Name of the artifact
-        path: build/app/outputs/flutter-apk/app-release.apk # Path to the release APK
-        # For debug build, use:
-        # path: build/app/outputs/flutter-apk/app-debug.apk
+        name: app-release
+        path: build/app/outputs/flutter-apk/app-release.apk
