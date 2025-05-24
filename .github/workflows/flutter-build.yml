@@ -1,42 +1,48 @@
+name: Flutter Build
+
 on:
   push:
-  branches: [ main ] # Trigger on push to main branch
-  workflow_dispatch: # Allow manual trigger
+    branches: [ main, master ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest # Use the latest Ubuntu runner
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4 # Checkout the repository code
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Set up Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin' # Use Temurin JDK distribution
-        java-version: '17' # Use Java 17, compatible with recent Android Gradle Plugin
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
 
-    - name: Set up Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        channel: 'stable' # Use the stable Flutter channel
-        # Optional: specify Flutter version if needed
-        # flutter-version: '3.x.x'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
 
-    - name: Install dependencies
-      run: flutter pub get
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.13.0'  # 🔄 غير الرقم لإصدار Flutter الخاص بك
+          channel: 'stable'
 
-    - name: Build APK
-      run: flutter build apk --release # Build a release APK
-      # Use --debug for a debug build:
-      # run: flutter build apk --debug
+      - name: Accept Licenses
+        run: |
+          yes | sdkmanager --licenses
+          flutter doctor --android-licenses
 
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-apk # Name of the artifact
-        path: build/app/outputs/flutter-apk/app-release.apk # Path to the release APK
-        # For debug build, use:
-        # path: build/app/outputs/flutter-apk/app-debug.apk
-        
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: build/app/outputs/apk/release/app-release.apk
