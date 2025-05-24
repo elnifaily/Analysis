@@ -2,60 +2,49 @@ name: Build Flutter Android APK
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [ main ] # Trigger on push to main branch
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Use the latest Ubuntu runner
 
     steps:
-    # الخطوة 1: تنزيل الكود
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4 # Checkout the repository code
 
-    # الخطوة 2: تثبيت Java 17
+    # Note: Removed the potentially problematic 'android-actions/setup-android' step.
+    # The 'subosito/flutter-action' below should handle necessary Android SDK setup.
+
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
-        distribution: 'temurin'
-        java-version: '17'
+        distribution: 'temurin' # Use Temurin JDK distribution
+        java-version: '17' # Use Java 17, compatible with recent Android Gradle Plugin
 
-    # الخطوة 3: تثبيت Android SDK يدويًا
-    - name: Install Android SDK
-      run: |
-        wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip
-        mkdir -p $ANDROID_HOME/cmdline-tools/latest
-        unzip commandlinetools-linux-* -d $ANDROID_HOME/cmdline-tools/latest
-        rm commandlinetools-linux-*.zip
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-34" "build-tools;34.0.0" "ndk;25.1.8937393"
-
-    # الخطوة 4: قبول التراخيص
-    - name: Accept licenses
-      run: |
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
-        flutter doctor --android-licenses
-
-    # الخطوة 5: تثبيت Flutter
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
-        channel: 'stable'
-        flutter-version: '3.13.0'  # 🔄 غير للإصدار الخاص بك
+        channel: 'stable' # Use the stable Flutter channel
+        # Optional: specify Flutter version if needed
+        # flutter-version: '3.x.x'
 
-    # الخطوة 6: تثبيت dependencies
     - name: Install dependencies
-      run: |
-        flutter clean
-        flutter pub get
+      run: flutter pub get
 
-    # الخطوة 7: بناء APK
+    # Accept Android SDK licenses automatically before build
+    - name: Accept Android licenses
+      run: yes | flutter doctor --android-licenses
+
     - name: Build APK
-      run: flutter build apk --release
+      run: flutter build apk --release # Build a release APK
+      # Use --debug for a debug build:
+      # run: flutter build apk --debug
 
-    # الخطوة 8: رفع الناتج
-    - name: Upload APK
+    - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: app-release
-        path: build/app/outputs/flutter-apk/app-release.apk
+        name: release-apk # Name of the artifact
+        path: build/app/outputs/flutter-apk/app-release.apk # Path to the release APK
+        # For debug build, use:
+        # path: build/app/outputs/flutter-apk/app-debug.apk
