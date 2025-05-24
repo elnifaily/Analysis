@@ -3,7 +3,7 @@ name: Build Flutter APK
 on:
   push:
     branches:
-      - main  # غيّر اسم الفرع لو عندك فرع تاني
+      - main
 
 jobs:
   build:
@@ -22,9 +22,3 @@ jobs:
 
     - name: Build APK
       run: flutter build apk --release
-
-    - name: Upload APK
-      uses: actions/upload-artifact@v2
-      with:
-        name: app-release.apk
-        path: build/app/outputs/flutter-apk/app-release.apk
