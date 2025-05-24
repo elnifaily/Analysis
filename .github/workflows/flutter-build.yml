@@ -1,30 +1,45 @@
-name: Build Flutter APK
+name: Flutter Build
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main, master ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
 
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Set up Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.7.8'  # حدّد نسخة رقمية
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
 
-    - name: Install dependencies
-      run: flutter pub get
+      - name: Accept Android Licenses
+        run: |
+          yes | sdkmanager --licenses || true
+          flutter doctor --android-licenses
 
-    - name: Build APK
-      run: flutter build apk --release
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'  # ⚡ غير الرقم لإصدار Flutter الخاص بك
+          channel: 'stable'
 
-    - name: Upload APK
-      uses: actions/upload-artifact@v2
-      with:
-        name: app-release.apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          path: build/app/outputs/apk/release/app-release.apk
