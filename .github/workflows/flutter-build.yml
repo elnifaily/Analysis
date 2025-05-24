@@ -1,51 +1,62 @@
-name: Build Flutter Android APK
+name: Flutter Build Master
 
 on:
   push:
-    branches: [ main ] # Trigger on push to main branch
-  workflow_dispatch: # Allow manual trigger
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest # Use the latest Ubuntu runner
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
 
     steps:
+    # الخطوة 1: تنزيل الكود
     - name: Checkout code
-      uses: actions/checkout@v4 # Checkout the repository code
+      uses: actions/checkout@v4
 
+    # الخطوة 2: تثبيت Java 17
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
-        distribution: 'temurin' # Use Temurin JDK distribution
-        java-version: '17' # Use Java 17, compatible with recent Android Gradle Plugin
+        distribution: 'temurin'
+        java-version: '17'
 
+    # الخطوة 3: تثبيت Android SDK يدويًا
+    - name: Install Android SDK
+      run: |
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip
+        mkdir -p $ANDROID_HOME/cmdline-tools/latest
+        unzip -q commandlinetools-linux-*.zip -d $ANDROID_HOME/cmdline-tools/latest
+        rm commandlinetools-linux-*.zip
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "platforms;android-34" "build-tools;34.0.0" "ndk;25.1.8937393"
+
+    # الخطوة 4: إضافة مسارات Android إلى الـ PATH
+    - name: Update PATH
+      run: |
+        echo "PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools" >> $GITHUB_ENV
+
+    # الخطوة 5: تثبيت Flutter
     - name: Set up Flutter
       uses: subosito/flutter-action@v2
       with:
-        channel: 'stable' # Use the stable Flutter channel
+        channel: 'stable'
+        flutter-version: '3.13.0'  # 🔄 حدد إصدارك
 
-    # Define the working directory for Flutter commands
-    # IMPORTANT: Adjust this path if your Flutter project is in a different subfolder
-    - name: Set Project Directory Variable
-      id: project_dir
-      run: echo "dir=home/ubuntu/crypto_analyzer_app" >> $GITHUB_OUTPUT
+    # الخطوة 6: قبول التراخيص وتثبيت الحزم
+    - name: Accept licenses and install packages
+      run: |
+        yes | sdkmanager --licenses
+        flutter pub get
 
-    - name: Install dependencies
-      working-directory: ${{ steps.project_dir.outputs.dir }}
-      run: flutter pub get
-
-    # Accept Android SDK licenses automatically before build
-    - name: Accept Android licenses
-      working-directory: ${{ steps.project_dir.outputs.dir }}
-      run: yes | flutter doctor --android-licenses
-
+    # الخطوة 7: بناء الـ APK
     - name: Build APK
-      working-directory: ${{ steps.project_dir.outputs.dir }}
-      run: flutter build apk --release # Build a release APK
+      run: flutter build apk --release
 
-    - name: Upload APK artifact
+    # الخطوة 8: رفع الملف الناتج
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: release-apk # Name of the artifact
-        # Adjust the path based on the working directory
-        path: ${{ steps.project_dir.outputs.dir }}/build/app/outputs/flutter-apk/app-release.apk
+        name: app-release
+        path: build/app/outputs/flutter-apk/app-release.apk
